@@ -1,0 +1,9 @@
+func (rf *Raft) setHeartbeatsTimer() {
+	ticker := time.NewTicker(HeartbeatInterval)
+	for {
+		select {
+			case <- ticker.C:
+				rf.broadcastHeartbeat()
+		}
+	}
+}
