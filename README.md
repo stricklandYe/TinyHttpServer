@@ -15,4 +15,4 @@
 ## 可以拓展的地方
 我使用的是传统的IO来实现的，不够高效。可以在此基础上引入NIO的实现。相对于传统的阻塞IO（blocking IO）来说,NIO更好。
 ## 如何使用?
-将TinyHttpServer内的TinyWebServer直接用IDEA打开就行。**看了下整个文件只有几百kb，所以.gitignore页没搞。**
+将TinyHttpServer内的TinyWebServer直接用IDEA打开就行。
