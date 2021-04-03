@@ -9,9 +9,11 @@ import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.Socket;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class HttpResponse implements HttpServletResponse  {
 
@@ -20,6 +22,10 @@ public class HttpResponse implements HttpServletResponse  {
     private HttpRequest request;
     private Socket socket;
     private int status;
+    private enum RESOURCE_TYPE {
+        STATIC, //图片文件
+        DOC
+    }
 
     public static final String STATIC_DIR = System.getProperty("user.dir")+ File.separator+ "static";
     int BUFFER_SIZE = 2048;
@@ -101,7 +107,7 @@ public class HttpResponse implements HttpServletResponse  {
         //返回文本信息,如html,.js等
         byte[] buffer = new byte[BUFFER_SIZE];
         if (file.exists()) {
-            String requestHeaders = assembleResponse(file.length()); //先装配一部分HTTP报文
+            String requestHeaders = assembleResponse(file.length(),RESOURCE_TYPE.DOC); //先装配一部分HTTP报文
             try {
                 FileInputStream fileInput = new FileInputStream(file);
                 while((fileInput.read(buffer, 0, BUFFER_SIZE)) > 0 ) {
@@ -130,7 +136,7 @@ public class HttpResponse implements HttpServletResponse  {
             try {
                 int len;
                 FileInputStream inputStream = new FileInputStream(file);
-                String requestHeaders = assembleResponse(file.length());
+                String requestHeaders = assembleResponse(file.length(),RESOURCE_TYPE.STATIC);
                 writer.writeHeaders(requestHeaders);
                 writer.implicitFlush();
                 while((len = inputStream.read(buffer)) > 0) {
@@ -146,17 +152,43 @@ public class HttpResponse implements HttpServletResponse  {
         }
     }
 
-    public String assembleResponse(long length) {
+    public String assembleResponse(long length,RESOURCE_TYPE type) {
+        /*
+        * 对于html文档不做缓存
+        * 对于图片资源做缓存
+        * */
+
         String mimeType = mimeMap.get(request.getFileSuffix());
-        String now = ZonedDateTime.now().format(DateTimeFormatter.RFC_1123_DATE_TIME);
         StringBuilder responseHeaders = new StringBuilder();
-        responseHeaders
-                .append(String.format("HTTP/1.1 %d OK\r\n",HTTP_OK))
-                .append(String.format("Content-type: %s\r\n",mimeType))
-                .append(String.format("Content-length: %d\r\n",length))
-                .append("Connection: keep-alive\r\n")
-                .append(String.format("Date: %s\r\n",now))
-                .append("\r\n");
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat format = new SimpleDateFormat(
+                "EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+        format.setTimeZone(TimeZone.getTimeZone("GMT"));
+        if (type == RESOURCE_TYPE.DOC) {
+            //文本文件
+            String date = format.format(calendar.getTime());
+            responseHeaders
+                    .append(String.format("HTTP/1.1 %d OK\r\n",HTTP_OK))
+                    .append(String.format("Content-type: %s\r\n",mimeType))
+                    .append(String.format("Content-length: %d\r\n",length))
+                    .append("Connection: keep-alive\r\n")
+                    .append(String.format("Date: %s\r\n",date))
+                    .append("\r\n");
+        } else {
+            //图片静态资源
+            String now = format.format(calendar.getTime());
+            calendar.add(Calendar.DATE,1);
+            String  tomorrow= format.format(calendar.getTime());
+            responseHeaders
+                    .append(String.format("HTTP/1.1 %d OK\r\n",HTTP_OK))
+                    .append(String.format("Content-type: %s\r\n",mimeType))
+                    .append(String.format("Content-length: %d\r\n",length))
+                    .append(String.format("Expires: %s\r\n",tomorrow))
+                    .append("Connection: keep-alive\r\n")
+                    .append(String.format("Date: %s\r\n",now))
+                    .append("Cache-control: max-age=36000\r\n")
+                    .append("\r\n");
+        }
         return responseHeaders.toString();
     }
     
@@ -190,7 +222,7 @@ public class HttpResponse implements HttpServletResponse  {
             HttpServlet servletObj = httpServlet.newInstance();
             Method service = httpServlet.getMethod("service", HttpServletRequest.class, HttpServletResponse.class);
             service.invoke(servletObj,this.request,this);
-            String requestHeaders = assembleResponse(this.writer.count);
+            String requestHeaders = assembleResponse(this.writer.count,RESOURCE_TYPE.DOC);
             this.writer.realWrite(requestHeaders);
             this.writer.realFlush();
         } catch (NoSuchMethodException e) {

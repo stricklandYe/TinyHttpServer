@@ -316,7 +316,7 @@ public class HttpParser {
             parseRequestLine(requestLine);
             String line;
             while (!(line = reader.readLine()).equals("")) {
-                System.out.println(line);
+//                System.out.println(line);
                 int index = line.indexOf(":");
                 String name = line.substring(0, index);
                 String value = line.substring(index + 2); //去除空格

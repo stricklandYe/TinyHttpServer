@@ -21,7 +21,8 @@ public class Server {
                 //使用线程池来处理HTTP报文
                 Socket socket = serverSocket.accept();
                 ServerHandler handler = new ServerHandler(socket);
-                executor.execute(handler);
+                handler.run();
+//                executor.execute(handler);
             }
         } catch (IOException e) {
             e.printStackTrace();
