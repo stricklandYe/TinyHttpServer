@@ -3,6 +3,8 @@
 
 在接口的设计上，模仿了一些HttpServlert的接口接口定义。使用＠WebServlet注解来实现对URL的映射。使用反射来动态地加载Serlvet。tmp文件夹保存的是用户上传的文件,static保存的是静态文件，比如html文件。使用线程池来一次可以处理多个http请求。
 
+更详细的文档请查看：[TinyHttpServer](https://www.strickland.cloud/2021/04/04/tinyhttpserver/)
+
 ## 支持的请求
 - GET
 - POST
