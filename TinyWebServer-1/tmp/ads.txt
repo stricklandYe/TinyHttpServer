@@ -1,0 +1,86 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <assert.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <semaphore.h>
+
+#define BUFFER_SIZE 5
+
+int buffer[BUFFER_SIZE];
+int fill,loops = 100,use = 0;
+int consumers,producers;
+sem_t full,empty,mutex;
+
+void put(int value) {
+    buffer[fill] = value;
+    fill++;
+    if (fill == BUFFER_SIZE)
+        fill = 0;
+}
+
+int get() {
+    int tmp = buffer[use];
+    use ++;
+    if (use == BUFFER_SIZE)
+        use = 0;
+    return tmp;
+}
+
+void *producer() {
+    for (int i = 0; i < loops; i++) {
+        sleep(3);
+        sem_wait(&empty);
+        sem_wait(&mutex);
+
+        put(i);
+
+        sem_post(&mutex);
+        sem_post(&full);
+    }
+    for (int i = 0; i < consumers; i++) {
+        sem_wait(&empty);
+        sem_wait(&mutex);
+
+        put(-1);
+
+        sem_post(&mutex);
+        sem_post(&full);
+    }
+    return NULL;
+}
+
+void *consumer() {
+    int tmp = 0;
+    while(tmp != -1) {
+        sem_wait(&full);
+        sem_wait(&mutex);
+
+        tmp = get();
+
+        sem_post(&mutex);
+        sem_post(&empty);
+        printf("%d ",tmp);
+    }
+    return NULL;
+}
+
+int main(int argc, char *argv[]) {
+    consumers = 2;
+    sem_init(&empty,0,BUFFER_SIZE);
+    sem_init(&full,0,0);
+    sem_init(&mutex,0,1);
+    pthread_t pid,cons[consumers];
+
+    pthread_create(&pid,NULL,producer,NULL);
+//    pthread_create(&pid1,NULL,producer,NULL);
+    for (int i = 0; i < consumers; i++) {
+        pthread_create(&cons[i], NULL, consumer, (void *) (long long int) i);
+    }
+    pthread_join(pid,NULL);
+//    pthread_join(pid1,NULL);
+    for (int i = 0; i < consumers; i++) {
+        pthread_join(cons[i], NULL);
+    }
+    return 0;
+}

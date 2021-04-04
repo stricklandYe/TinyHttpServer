@@ -36,9 +36,9 @@ public class HttpParser {
         try {
             count = input.read(buf);
             if (count < 0) {
-                System.out.println("Read HTTP request error");
-                //不知道何种原因，如果这里的代码不return,在运行一段时间以后代码会出错
-                //return就可以避免这个情况.原因不得而知
+                //在一段时间后，应该是浏览器关闭了tcp链接，所以read会返回-1
+                //此时没有数据可以读取了，应该直接退出这个线程.
+                System.out.println("stream end has reached");
                 return;
             }
         } catch (IOException e) {
@@ -74,6 +74,7 @@ public class HttpParser {
                 * 是因为里面还包含着boundary,所以直接用else来处理.
                 * */
                 byte[] postData = getPostRequestBody(count,buf);
+                System.out.println(new String(postData));
                 String boundary =  type.substring(type.indexOf("=")+1);
                 String startBoundary = "--"+boundary;
                 int[] indexes = getBoundaryIndexes(postData,startBoundary.getBytes());

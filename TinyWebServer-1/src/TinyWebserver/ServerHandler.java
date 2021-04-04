@@ -34,7 +34,22 @@ public class ServerHandler implements Runnable{
             closeLink(socket,socket.getInputStream(),socket.getOutputStream());
         } catch (IOException e){
             e.printStackTrace();
+        } catch (NullPointerException e) {
+            /*
+            * 在服务器运行一段时间后,parse()中的read()函数会返回-1表示没有数据读取了
+            * 所以request内的数据并没有被正确的初始化，接下来执行response.responseToClient()会
+            * 引发空指针错误，所以在这里捕捉空指针错误。return来结束当前指针的运行.
+            * 在这里，不能调用system.exit()，因为根据文档,调用system.exit()会终止整个jvm
+            * */
+            System.out.println("no data to read,thread exits");
+            try {
+                closeLink(socket,socket.getInputStream(),socket.getOutputStream());
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+            return;
         }
+
     }
 
     public void scanServlet() {
